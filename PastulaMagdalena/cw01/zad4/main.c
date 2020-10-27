@@ -18,8 +18,10 @@ pthread_mutex_t writer_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t critic_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t readers_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_cond_t critic_cond = PTHREAD_COND_INITIALIZER;
+
 int readersCount;
-int writersCount;   // how many writers has written. After writing set cond wait for it to be zero
+int writersCount;
 
 uint32_t GetRandomTime(uint32_t max_val) {
     return rand()%max_val + 1;
@@ -30,30 +32,28 @@ int Writer(void* data) {
     int threadId = *(int*) data;
     
     for (int i = 0; i < WRITER_TURNS; i++) {
-        if (pthread_mutex_lock(&buffer_mutex) != 0) {
-            fprintf(stderr, "Error occured during locking the buffer mutex.\n");
+        if (pthread_mutex_lock(&critic_mutex) != 0) {
+            fprintf(stderr, "Error occured during locking the critic mutex.\n");
             exit (-1);
         }
-        while (is_buffer_full) {
-            printf("(W) Writer %d waiting to write to buffer.\r\n", threadId);
-            pthread_cond_wait(&buffer_write_cond, &buffer_mutex);
-        }
         //Write
-        printf("(W) Writer %d started writing to buffer...", threadId);
+        printf("(W) Writer %d started writing to critic...", threadId);
         fflush(stdout);
-        buffer_size += GetRandomTime(800);
-        is_buffer_full = (buffer_size >= BUFFER_MAX_SIZE);
+        usleep(GetRandomTime(200));
+        writersCount++;
         printf("writer finished\n");
-            
-        if (pthread_mutex_unlock(&buffer_mutex) != 0) {
-            fprintf(stderr, "Error occured during unlocking the buffer mutex.\n");
+
+        if (writersCount >= WRITERS_COUNT) {
+            pthread_cond_broadcast(&critic_cond);
+        }
+        if (pthread_mutex_unlock(&critic_mutex) != 0) {
+            fprintf(stderr, "Error occured during unlocking the critic mutex.\n");
             exit (-1);
         }
         // Think, think, think, think
         usleep(GetRandomTime(1000));
     }
 
-    pthread_cond_broadcast(&buffer_read_cond);
     free(data);
     return 0;
 }
@@ -105,7 +105,35 @@ int Reader(void* data) {
 int Critic(void* data) {
     
     while (1) {
+        if (pthread_mutex_lock(&critic_mutex) != 0) {
+            fprintf(stderr, "Error occured during locking the critic mutex.\n");
+            exit (-1);
+        }
+        while (writersCount < WRITERS_COUNT) {
+            pthread_cond_wait(&critic_cond, &critic_mutex);
+            printf("(C) Critic waiting for writers.\r\n");
+        }
+        if (pthread_mutex_lock(&writer_mutex) != 0) {
+            fprintf(stderr, "Error occured during locking the writer mutex.\n");
+            exit (-1);
+        }
         
+        printf("(C) Critic started reviewing and writing...");
+        fflush(stdout);
+        // Review
+        usleep(GetRandomTime(200));
+        printf("critic finished.\r\n");
+        writersCount = 0;
+        pthread_cond_broadcast(&critic_cond);
+        
+        if (pthread_mutex_unlock(&writer_mutex) != 0) {
+            fprintf(stderr, "Error occured during unlocking the writer mutex.\n");
+            exit (-1);
+        }
+        if (pthread_mutex_unlock(&critic_mutex) != 0) {
+            fprintf(stderr, "Error occured during unlocking the critic mutex.\n");
+            exit (-1);
+        }
     }
 
     return 0;
@@ -117,6 +145,7 @@ int main(int argc, char* argv[])
 
     pthread_t writerThreads[WRITERS_COUNT];
     pthread_t readerThreads[READERS_COUNT];
+    pthread_t criticThread;
 
     int i,rc;
 
@@ -134,10 +163,15 @@ int main(int argc, char* argv[])
 
         if (rc != 0)
         {
-    	    fprintf(stderr,"Couldn't create the reader threads");
+    	    fprintf(stderr,"Couldn't create the reader threads.");
             exit (-1);
         }
     }
+
+    rc = pthread_create(&criticThread,
+                    NULL,
+                    (void*) Critic,
+                    NULL);
 
     for (int i=0;i<WRITERS_COUNT;i++) {
         // Create the Writer thread
@@ -152,9 +186,14 @@ int main(int argc, char* argv[])
 
         if (rc != 0) 
         {
-            fprintf(stderr,"Couldn't create the writer threads");
+            fprintf(stderr,"Couldn't create the writer threads.");
             exit (-1);
         }
+    }
+
+    if (rc != 0) {
+        fprintf(stderr,"Couldn't create the critic thread.");
+        exit (-1);
     }
 
     // At this point, the readers and writers should perform their operations
@@ -167,6 +206,15 @@ int main(int argc, char* argv[])
     for (int i=0;i<WRITERS_COUNT;i++) {
         pthread_join(writerThreads[i],NULL);
     }
+
+    usleep(1000);
+
+    pthread_cancel(criticThread);
+
+    pthread_mutex_destroy(&writer_mutex);
+    pthread_mutex_destroy(&readers_mutex);
+    pthread_mutex_destroy(&critic_mutex);
+    pthread_cond_destroy(&critic_cond);
 
     return (0);
 }
