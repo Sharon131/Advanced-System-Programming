@@ -2,7 +2,7 @@
 ## Laboratorium 2 - Wprowadzenie
 ### Magdalena Pastuła
 
-Do wykonania ćwiczenia wykorzystano dostarczoną maszynę wirtualną z systemem Fedora w wersji 25, wersja kernela: 4.9.12-200.fc25.x86_64.
+Do wykonania ćwiczenia wykorzystano dostarczoną maszynę wirtualną z systemem Fedora w wersji 25 i  wersją kernela 4.9.12-200.fc25.x86_64.
 
 ### 1. LXR i dokumentacja.
 1.1 Znajdź definicję struktury `file_operations`. Zapoznaj się z jej polami.
@@ -53,6 +53,7 @@ struct file_operations {
 ```
 
 1.2 Spróbuj odnaleźć użycie tej struktury w systemie plików `hostfs`.
+
 Znalezione użycie struktury `file_operations` w systemie plików `hostfs` w pliku `hostfs_kern.c`:
 ```C
 static const struct file_operations hostfs_file_fops = {
@@ -77,12 +78,43 @@ static const struct file_operations hostfs_dir_fops = {
 
 1.3 Czy potrafisz zinterpretować zastosowanie poszczególnych pól?
 
+Poszczególne pola odpowiadają operacjom możliwym do wykonania na pliku (`hostfs_file_fops`)i katalogu (`hostfs_dir_fops`). Możliwe operacje to między innymi:
+- llseek -> ustawienie wskaźnika w pliku
+- read_iter -> czytanie z pliku
+- write_iter -> pisanie do pliku
+- open -> otwarcie pliku
+- release -> zamknięcie pliku
 
 1.4 Zlokalizuj w dokumentacji (katalog `Documentation` lub wyszukiwarka) informacje o tym, jak przechodzić po strukturze katalogów w jądrze.
 
+Głównym plikiem opisującym strukturę katalogów w jądrze jest plik `/filesystems/path_lookup.txt`.
+
 1.5 Zlokalizuj plik `namei.h` a w nim funkcje `kern_path` i `user_path`. Czym się one różnią i kiedy mają zastosowanie?
 
+Definicja funkcji `kern_path`:
+```C
+int kern_path(const char *name, unsigned int flags, struct path *path)
+{
+    return filename_lookup(AT_FDCWD, getname_kernel(name),
+                            flags, path, NULL);
+}
+```
+
+Definicja funkcji `user_path`:
+```C
+static inline int user_path_at(int dfd, const char __user *name, 
+                                unsigned flags, struct path *path)
+{
+    return user_path_at_empty(dfd, name, flags, path, NULL);
+}
+```
+
+Funkcje `kern_path` oraz `user_path` wyszukują ścieżkę do pliku podanego w argumencie `name`. W tym celu funkcje te wyszukują strukturę `dentry`, która odpowiada danemu plikowi, a następnie zwracają tą strukturę poprzez argument `path`. Dodatkowo, zwiększany jest licznik odwołań do tych struktur.
+
+Różnicą między tymi funkcjami jest środowisko: `kern_path` wyszukuje dla łańcucha znajdującego się w pamięci jądra, natomiast `user_path` dla łańcucha znajdujęcego się w pamięci użytkownika.
+
 1.6 Znajdź definicję struktury `dentry`.
+
 Znaleziona definicja struktury `dentry`:
 ```C
 struct dentry {
@@ -121,6 +153,21 @@ struct dentry {
 1.7 Co robi funkcja `dget` i po co?
 Znaleziona definicja funkcji `dget`:
 ```C
+/**
+ *      dget, dget_dlock -      get a reference to a dentry
+ *      @dentry: dentry to get a reference to
+ *
+ *      Given a dentry or %NULL pointer increment the reference count
+ *      if appropriate and return the dentry. A dentry will not be 
+ *      destroyed when it has references.
+ */
+static inline struct dentry *dget_dlock(struct dentry *dentry)
+{
+    if (dentry)
+        dentry->d_lockref.count++;
+    return dentry;
+}
+
 static inline struct dentry *dget(struct dentry *dentry)
 {
     if (dentry)
@@ -128,9 +175,22 @@ static inline struct dentry *dget(struct dentry *dentry)
     return dentry;
 }
 ```
+
+Jak wskazuje opis, funkcja ta zwiększa liczbę odwołań do struktury. Dzięki nowym odwołaniom struktura `dentry` nie zostanie usunięta.
+
 ### 2. Kompilacja jadra.
 
+2.1 Zapoznaj się z plikiem `.config`.
+
+Plik opisuje oraz zawiera konfigurację jądra.
+
+2.2 Wykonaj polecenie `make help`.
+
+Po wykonaniu polecenia `make help` wypisuje się przewodnik po Makefile'a do budowy jądra.
+
 2.3 Co robi polecenie `make oldconfig`?
+
+Polecenie `make oldconfig` dokonuje
 `make oldconfig` -> Update current config utilising a provided .config as base. Aktualizacja obecnej konfiguracji bazująca na pliku .config.
 
 2.4 Co robi polecenie `make menuconfig`?
