@@ -190,29 +190,31 @@ Po wykonaniu polecenia `make help` wypisuje się przewodnik po Makefile'a do bud
 
 2.3 Co robi polecenie `make oldconfig`?
 
-Polecenie `make oldconfig` dokonuje
-`make oldconfig` -> Update current config utilising a provided .config as base. Aktualizacja obecnej konfiguracji bazująca na pliku .config.
+Polecenie `make oldconfig` dokonuje aktualizacji obecnej konfiguracji korzystając z pliku `.config.
 
 2.4 Co robi polecenie `make menuconfig`?
 
-`make menuconfig` -> Update current config utilising a menu based program. Aktualizacja obecnej konfiguracji wykorzystując program oparty o menu.
+Polecenie `make menuconfig` wyświetla menu graficzne, za pomocą którego można uaktualnić konfigurację w pliku `.config`
+
+2.5 Ustaw dowolną, ale charakterystyczną wersję lokalną (`CONFIG_LOCALVERSION` albo `General setup/Local version`).
+
+Ustawiono `JanTrzeci`.
+
+2.6 Zrób małą zmianę w konfiguracji (np. włącz obsługę któregoś systemu plików).
+
+Dodano obsługę systemu plików F2FS.
 
 2.7 Co robi polecenie `make all`?
 
-`make all` -> Build all targets marked with [*]
-Budowanie wszystkich targetów oznaczonych gwiazdką. Między innymi: `vmlinux` (sam kernel), `modules` (wszystkie moduły).
+Polecenie `make all` buduje wszystkie targety oznaczone gwiazdką, czyli `vmlinux` i `modules` i skompresowane jądro (`bzImage`).
 
 2.8 Zmierz czas kompilacji jądra po modyfikacji. Jakie informacje się wyświetlają podczas kompilacji?
 
+Podczas kompilacji w terminalu wypisują się kolejno kompilowane pliki i moduły.
+
 2.9 Co robią polecenia `make modules_install` i `make install`?
 
-`make modules_install` -> Install all modules to INSTALL_MOD_PATH (default: /). Instalacja wszystkich modułów pod ścieżką INSTALL_MOD_PATH. Domyślnie instalują się pod ścieżką `/`
-
-`make install` -> Install kernel using
-                  (your) ~/bin/installkernel or
-                  (distribution) /sbin/installkernel or
-                  install to $(INSTALL_PATH) and run lilo
-
+Polecenie `make modules_install` instaluje wszystkie moduły jądra, natomiast komenda `make install` instaluje jądro w aktualnym systemie.
 
 ### 3. Moduł trivial_module.
 
