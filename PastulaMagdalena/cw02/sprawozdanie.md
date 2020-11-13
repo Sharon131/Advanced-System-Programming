@@ -212,9 +212,18 @@ Polecenie `make all` buduje wszystkie targety oznaczone gwiazdką, czyli `vmlinu
 
 Podczas kompilacji w terminalu wypisują się kolejno kompilowane pliki i moduły.
 
+Zmierzony czas kompilacji:
+real	62m 38.067s
+user	194m 32.753s
+sys	    30m 9.810s
+
 2.9 Co robią polecenia `make modules_install` i `make install`?
 
 Polecenie `make modules_install` instaluje wszystkie moduły jądra, natomiast komenda `make install` instaluje jądro w aktualnym systemie.
+
+2.10 Zainstaluj jądro w systemie.
+
+2.11 Zrestartuj system i uruchom nowe jądro.
 
 ### 3. Moduł trivial_module.
 
