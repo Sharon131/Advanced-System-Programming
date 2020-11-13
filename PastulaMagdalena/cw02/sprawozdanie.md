@@ -223,7 +223,15 @@ Polecenie `make modules_install` instaluje wszystkie moduły jądra, natomiast k
 
 2.10 Zainstaluj jądro w systemie.
 
+Wykonano komendy `make modules_install` oraz `make install`.
+
 2.11 Zrestartuj system i uruchom nowe jądro.
+
+Po restarcie i wpisaniu komendy `uname -a` wypisuje się następująca linia:
+```
+Linux ps2017 4.10.0JanTrzeci #1 SMP Fri Nov 13 09:04:03 CET 2020 x86_64 x86_64 x86_64 GNU/Linux
+```
+Jak widać, została zmieniona data ostatniej kompilacji oraz wypisuje się nazwa wpisana w `Local version`.
 
 ### 3. Moduł trivial_module.
 
