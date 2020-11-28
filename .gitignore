@@ -2,3 +2,5 @@
 *.o
 main
 *.tar.gz
+*.ko
+*.sh

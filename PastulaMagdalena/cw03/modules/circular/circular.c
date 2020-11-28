@@ -11,34 +11,46 @@
 MODULE_LICENSE("GPL");
 
 #define BUFFER_SIZE     40
-#define CIRCULAR_MAJOR  199
 
 ssize_t circular_write(struct file *filp, const char __user *user_buf,
 	size_t size, loff_t *f_pos);
 ssize_t circular_read(struct file *filp, char __user *user_buf,
 	size_t count, loff_t *f_pos);
+ssize_t circular_write_proc(struct file *filp, const char __user *user_buf,
+	size_t size, loff_t *f_pos);
 
 static char *buffer;
-static int write_pos; 
+static unsigned long long buffer_curr_size = BUFFER_SIZE;
+static int write_pos;
+
+struct proc_dir_entry *proc_entry;
 
 const struct file_operations circular_fops = {
 	.read = circular_read,
 	.write = circular_write,
 };
 
-static miscdevice circ_device = {
-	// .minor = MISC_DYNAMIC_MINOR, // ??
-	.name = "circular_module",
-	.fops = &circular_file_ops,
+static struct miscdevice circ_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "circular",
+	.fops = &circular_fops,
 	.mode = 00666
+};
+
+static struct file_operations proc_fops = {
+	.write = circular_write_proc,
 };
 
 static int __init circular_init(void)
 {
-    /* Register a device with the given major number */
-	
 	int result;
-    buffer = kmalloc(BUFFER_SIZE, GFP_KERNEL);
+    proc_entry = proc_create("circular", 0000, NULL, &proc_fops);
+	if (!proc_entry) {
+		printk(KERN_WARNING "Cannot create /proc/circular\n");
+		goto err;
+	}
+
+	buffer = kmalloc(BUFFER_SIZE, GFP_KERNEL);
     
     if (!buffer) {
 		result = -ENOMEM;
@@ -51,30 +63,27 @@ static int __init circular_init(void)
 	
 	if (misc_register(&circ_device))
 	{
-		printk(KERN_WARNING, "Cannot register the /dev/simple device with major number: %d\n",
-			CIRCULAR_MAJOR);
+		printk(KERN_WARNING, "Cannot register the /dev/circular device.\n");
 		goto err;
 	}
 
 	return result;
 
 err:
-	// if (proc_entry) {
-	// 	proc_remove(proc_entry);
-	// }
-	// unregister_chrdev(BUFFER_MAJOR, "circular");
+	if (proc_entry) {
+		proc_remove(proc_entry);
+	}
 	kfree(buffer);
-	// misc_deregister(&circ_device);
+	misc_deregister(&circ_device);
 	return result;
 }
 
 static void __exit circular_exit(void)
 {
-    /* Unregister the device and /proc entry */
-	// unregister_chrdev(CIRCULAR_MAJOR, "circular");
-
 	/* Free the buffer. No need to check for NULL - read kfree docs */
+	proc_remove(proc_entry);
 	kfree(buffer);
+	misc_deregister(&circ_device);
 
 	printk(KERN_INFO "The cicular module has been removed\n");
 }
@@ -86,7 +95,7 @@ ssize_t circular_write(struct file *filp, const char __user *user_buf,
 
 	for (count=0;count<size;count++)
 	{
-		if (copy_from_user(buffer+*f_pos, user_buf+count, 1))
+		if (copy_from_user(buffer+write_pos, user_buf+count, 1))
 		{
             printk(KERN_WARNING "CICULAR: could not copy data from user\n");
             return -EFAULT;
@@ -95,19 +104,6 @@ ssize_t circular_write(struct file *filp, const char __user *user_buf,
 		write_pos = (write_pos + 1) %BUFFER_SIZE;
 	}
 
-    // while (count < size)
-    // {
-    //     if (*f_pos + size > BUFFER_SIZE - 1) {
-    //         size = BUFFFER_SIZE - 1 - *f_pos;
-    //         //copy till end of file
-    //     }
-    //     else{
-    //         size = *f_pos + count;
-    //     }
-
-    //     //copy rest or all if it is not bigger that buffer
-        
-    // }
 	
 	buffer[write_pos] = '\0';
 	// *f_pos = (*f_pos + 1) %BUFFER_SIZE;
@@ -119,8 +115,6 @@ ssize_t circular_read(struct file *filp, char __user *user_buf,
 	size_t count, loff_t *f_pos)
 {
 	size_t to_copy = strlen(buffer);
-
-	// printk(KERN_WARNING "CIRCULAR: read f_pos is %lld\n", *f_pos);
 
 	if (*f_pos >= to_copy) {
 		return 0;
@@ -135,7 +129,53 @@ ssize_t circular_read(struct file *filp, char __user *user_buf,
 	return to_copy;
 }
 
+ssize_t circular_write_proc(struct file *filp, const char __user *user_buf,
+	size_t size, loff_t *f_pos)
+{
+	char* new_buffer;
+	unsigned long long buffer_new_size;
 
+	if (kstrtoull_from_user(user_buf, size, 10, &buffer_new_size))
+	{
+		printk(KERN_WARNING "CICULAR: could not copy data from user\n");
+		return -EFAULT;	
+	}
 
+	if (buffer_new_size == buffer_curr_size)
+	{
+		return size;
+	}
+
+	if (buffer_new_size == 0)
+	{
+		printk(KERN_WARNING "CICULAR: buffer size must be greater than zero\n");
+		return -EFAULT;	
+	}
+
+	new_buffer = kmalloc(buffer_new_size, GFP_KERNEL);
+
+	if (!new_buffer)
+	{
+		printk(KERN_WARNING "CICULAR: could not allocate\n");
+		return -EFAULT;	
+	}
+
+	if (buffer_new_size >= buffer_curr_size)
+	{
+		memcpy(new_buffer, buffer, buffer_curr_size);
+	}
+	else
+	{
+		memcpy(new_buffer, buffer, buffer_new_size-1);
+		new_buffer[buffer_new_size-1] = 0;
+	}
+
+	kfree(buffer);
+	buffer = new_buffer;
+	buffer_curr_size = buffer_new_size;
+
+	return size;
+}
 module_init(circular_init);
 module_exit(circular_exit);
+
