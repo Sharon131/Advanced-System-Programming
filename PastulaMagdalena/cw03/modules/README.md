@@ -4,11 +4,10 @@
 
 ### Zadanie 1 - obsługa pamięci.
 
-1.1 Urządzenie `/dev/circular` działające jak circular buffer.
+W tym zadaniu wykonano wszystkie podpunkty. W przypadku intefejsu do realokacji buforu w folderze `/proc` przed użyciem należy najpierw zmienić jego prawa dostępu. Domyślnie można z niego tylko czytać.
 
-1.2 Interfejs do realokacji bufora `/proc/circular` ( w tym alokacja pamięci).
-
-1.3 Automatyczna alokacja urządzenia z pomocą `miscdevice`.
+Logi wypisywane w konsoli w czasie kompilacji modułu:
+![]()
 
 ### Zadanie 2. - Zaawansowany moduł.
 
@@ -17,3 +16,10 @@
 2.2 Urządzenie `/dev/jiffies`.
 
 2.3 Urządzenie `/dev/mountderef`.
+
+Logi wypisywane w czasie kompilacji modułu:
+![]()
+
+### Zadanie 3. - Backdoor.
+
+To zadanie nie zostało wykonane.

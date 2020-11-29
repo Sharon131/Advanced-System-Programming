@@ -43,9 +43,10 @@ static struct file_operations proc_fops = {
 
 static int __init circular_init(void)
 {
-	int result;
+	int result = 0;
     proc_entry = proc_create("circular", 0000, NULL, &proc_fops);
 	if (!proc_entry) {
+		result = -ENOMEM;
 		printk(KERN_WARNING "Cannot create /proc/circular\n");
 		goto err;
 	}
@@ -57,13 +58,13 @@ static int __init circular_init(void)
 		goto err;
 	} 
 	
-	buffer[0] = '\0';
+	memset(buffer, 0, buffer_curr_size);
 	result = 0;
-	// printk(KERN_INFO "The cicular module has been inserted.\n");
 	
 	if (misc_register(&circ_device))
 	{
-		printk(KERN_WARNING, "Cannot register the /dev/circular device.\n");
+		result = -ENOMEM;
+		printk(KERN_WARNING "Cannot register the /dev/circular device.\n");
 		goto err;
 	}
 
@@ -101,20 +102,17 @@ ssize_t circular_write(struct file *filp, const char __user *user_buf,
             return -EFAULT;
         }
 
-		write_pos = (write_pos + 1) %BUFFER_SIZE;
+		write_pos = (write_pos + 1) % buffer_curr_size;
 	}
 
-	
-	buffer[write_pos] = '\0';
-	// *f_pos = (*f_pos + 1) %BUFFER_SIZE;
-	// *f_pos += size;
 	return size;
 }
 
 ssize_t circular_read(struct file *filp, char __user *user_buf,
 	size_t count, loff_t *f_pos)
 {
-	size_t to_copy = strlen(buffer);
+	uint64_t string_size = strlen(buffer);
+	size_t to_copy = (string_size<buffer_curr_size) ? string_size : buffer_curr_size;
 
 	if (*f_pos >= to_copy) {
 		return 0;
@@ -163,6 +161,7 @@ ssize_t circular_write_proc(struct file *filp, const char __user *user_buf,
 	if (buffer_new_size >= buffer_curr_size)
 	{
 		memcpy(new_buffer, buffer, buffer_curr_size);
+		memset(new_buffer+buffer_curr_size, 0, buffer_new_size-buffer_curr_size);
 	}
 	else
 	{
