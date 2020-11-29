@@ -9,14 +9,25 @@
 #include <linux/miscdevice.h>
 #include <asm/param.h>
 
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/namei.h>
+#include <linux/seq_file.h>
+#include <linux/mount.h>
+// #include <linux/sched/task.h>
+
 MODULE_LICENSE("GPL");
 
 #define JIFFIES_BUFF_SIZE   50
+#define MOUNT_PATH_SIZE     100
 
 char jiffies_buffer[50];
 
 char process_name[TASK_COMM_LEN];
-char process_name_len = 0;
+uint16_t process_name_len = 0;
+
+char mount_path[MOUNT_PATH_SIZE];
+uint16_t mount_path_len = 0;
 
 ssize_t prname_write(struct file *filp, const char __user *user_buf,
 	size_t size, loff_t *f_pos);
@@ -221,13 +232,73 @@ ssize_t jiffies_read(struct file *filp, char __user *user_buf,
 ssize_t mounderef_write(struct file *filp, const char __user *user_buf,
 	size_t size, loff_t *f_pos)
 {
-    return 0;
+    struct path _path, root_path;
+	uint32_t rc;
+	char *new_mount_path;
+    char given_path[MOUNT_PATH_SIZE];
+
+	if (copy_from_user(given_path, user_buf, size)) {
+		return -EFAULT;
+	}
+
+	given_path[size] = 0;
+
+	rc = kern_path(given_path, LOOKUP_FOLLOW, &_path);
+	if (rc)
+		return rc;
+
+	dput(_path.dentry);
+
+	root_path = (struct path) {
+		.dentry = dget(_path.mnt->mnt_root),
+		.mnt = _path.mnt
+	};
+
+	new_mount_path = d_path(&root_path, given_path, size + 1);
+    new_mount_path[size] = 0;
+
+	path_put(&root_path);
+
+	if (IS_ERR(new_mount_path)) {
+		rc = PTR_ERR(new_mount_path);
+        return rc;
+	}
+
+    strcpy(mount_path, new_mount_path);
+	mount_path_len = strlen(mount_path);
+
+	return size;
 }
 
 ssize_t mountderef_read(struct file *filp, char __user *user_buf,
 	size_t count, loff_t *f_pos)
 {
-    return 0;
+    size_t bytes_to_copy;
+	uint64_t not_copied;
+
+	if (mount_path_len == 0) {
+        return -EBUSY;
+    }
+
+	if (*f_pos < 0) {
+        return -EINVAL;
+    }
+
+	if (count==0 || *f_pos >= mount_path_len) {
+        return 0;
+    }
+
+	bytes_to_copy = mount_path_len - *f_pos < count ? (mount_path_len - *f_pos) : count;
+
+	not_copied = copy_to_user(user_buf, mount_path + *f_pos, bytes_to_copy);
+
+	if (not_copied) {
+        return -EFAULT;
+    }
+
+	*f_pos += bytes_to_copy;
+
+	return bytes_to_copy;
 }
 
 

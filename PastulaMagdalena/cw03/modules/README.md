@@ -11,11 +11,7 @@ Logi wypisywane w konsoli w czasie kompilacji modułu:
 
 ### Zadanie 2. - Zaawansowany moduł.
 
-2.1 Urządzenie `/dev/prname`.
-
-2.2 Urządzenie `/dev/jiffies`.
-
-2.3 Urządzenie `/dev/mountderef`.
+Komunikaty wypisywane podczas czytania z urządzeń posiadają na końcu znak `%`.
 
 Logi wypisywane w czasie kompilacji modułu:
 ![]()
