@@ -137,9 +137,6 @@ ssize_t prname_write(struct file *filp, const char __user *user_buf,
 		return -EINVAL;
 
 	new_pid = _new_pid;
-	/* check for pid_t overflow */
-	// if (new_pid != _new_pid)
-	// 	return -EINVAL;
 
 	new_pidp = find_get_pid(new_pid);
 	if (!new_pidp)
