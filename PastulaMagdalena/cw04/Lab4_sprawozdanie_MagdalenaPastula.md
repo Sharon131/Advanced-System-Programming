@@ -195,7 +195,38 @@ ssize_t broken_write(struct file *filp, const char *user_buf, size_t count,
 }
 ```
 
-Po przeanalizowaniu tego kodu okazuje się, że faktycznie nastąpił tu błąd. Wprawdzie używana jest funkcja kmalloc, ale jej wynik jest ignorowany, zatem wskaźnik mybuf przekazany do funkcji kopiowania z przestrzeni użytkownika jest równy `NuLL`.
+Po przeanalizowaniu tego kodu okazuje się, że faktycznie nastąpił tu błąd. Wprawdzie używana jest funkcja kmalloc, ale jej wynik jest ignorowany, zatem wskaźnik mybuf przekazany do funkcji kopiowania z przestrzeni użytkownika jest równy `NULL`. Po poprawieniu tego błędu i ponownym 
+uruchowieniu modułu otrzymujemy następujące komunikaty Oops:
+
+![Screen początku komunikatów opps](./module4_error2.png)
+
+![Screen dalszej części komunikatów oops](./module4_stack_RIP2.png)
+
+Okazało się, że w module znajduje się następny błąd w funkcji `count_numbers`, której kod znajduje się poniżej. Ponownie występuje tutaj odwołanie się do wskaźnika, który jest równy `NULL` i który nie jest przekazanym argumentem.
+
+```C
+int count_numbers(char *str)
+{
+        int numbers = 0;
+        char *ptr = 0;
+
+        while (*ptr != 0) {
+                ptr++;
+		if (isdigit(*ptr))
+                        numbers++;
+        }
+
+        return numbers;
+}
+```
+
+Po naprawieniu tego błędu moduł działał już poprawnie.
 
 ## Zadanie 2 - GDB.
+
+### Urządzenie `/proc/loadsvg`
+
+### Urządzenie `/proc/PID/fd`
+
+### Urządzenie `/proc/PID/environ`
 
