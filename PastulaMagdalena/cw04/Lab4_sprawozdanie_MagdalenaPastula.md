@@ -102,6 +102,52 @@ Po poprawieniu błędu i ponownym uruchomieniu modułu otrzymujemy komunikaty wy
 
 ### Moduł nr 3
 
+Poniżej znajduje się screeny przedstawiające komunikaty Oops po załadowaniu i uruchomieniu modułu drugiego.
+
+![Screen początku komunikatów opps](./module3_error.png)
+
+![Screen dalszej części komunikatów oops](./module3_stack_RIP.png)
+
+W tym przypadku błąd sugerowany przez Oops to dereferencja wskaźnika równego `NULL` podczas użycia funkcji `strcpy` w funkcji `broken_write` i `fill_buffer_with_process_name`. Poniżej znajduje się kod tych dwóch funcji.
+
+```C
+void fill_buffer_with_process_name(long pid)
+{
+	struct pid *selected_pid = find_get_pid(pid);
+	struct task_struct *selected_proc = pid_task(selected_pid, PIDTYPE_PID);
+
+	if (selected_proc != NULL)
+		strcpy(buf1, (char *) selected_proc->pid);
+	else
+		sprintf(buf1, "The process with PID: %ld cannot be found", pid);
+}
+
+ssize_t broken_write(struct file *filp, const char *buf, size_t count,
+		     loff_t *f_pos)
+{
+	int error = 0;
+	long pid = 0;
+	int copy_size = count;
+
+	if (count > buf1_size)
+		copy_size = buf1_size - 1;
+
+	error = copy_from_user(buf1, buf, copy_size);
+	buf1[copy_size] = 0;
+
+	pid = simple_strtol(buf1, buf1 + copy_size, 10);
+
+	if (pid < 1)
+		printk(KERN_WARNING "Invalid PID number\n");
+	else
+		fill_buffer_with_process_name(pid);
+
+	write_count++;
+	return copy_size;
+}
+```
+
+Jak widać, błąd znajduje się w funkcji `fill_buffer_with_process_name` przy użyciu funkcji `strcpy`: podany jako drugi argument pid jest liczbą całkowitą, a nie napisem, zatem po rzutowaniu na wskaźnik na char otrzymujemy wskaźnik na niekontrolowany fragment pamięci.
 
 ### Moduł nr 4
 
