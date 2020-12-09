@@ -147,10 +147,55 @@ ssize_t broken_write(struct file *filp, const char *buf, size_t count,
 }
 ```
 
-Jak widać, błąd znajduje się w funkcji `fill_buffer_with_process_name` przy użyciu funkcji `strcpy`: podany jako drugi argument pid jest liczbą całkowitą, a nie napisem, zatem po rzutowaniu na wskaźnik na char otrzymujemy wskaźnik na niekontrolowany fragment pamięci.
+Jak widać, błąd znajduje się w funkcji `fill_buffer_with_process_name` przy użyciu funkcji `strcpy`: podany jako drugi argument pid jest liczbą całkowitą, a nie napisem, zatem po rzutowaniu na wskaźnik na char otrzymujemy wskaźnik na niekontrolowany fragment pamięci. Ponieważ przekazany pid był równy 2, to program próbuje dostać się do adresu równego 2, co widać w komunikacie Oops.
 
 ### Moduł nr 4
 
+Poniżej znajduje się screeny przedstawiające komunikaty Oops po załadowaniu i uruchomieniu modułu drugiego.
+
+![Screen początku komunikatów opps](./module4_error.png)
+
+![Screen dalszej części komunikatów oops](./module4_stack_RIP.png)
+
+W przypadku tego modułu Oops zwraca informację, że nastąpił błąd w pliku `usercopy.c`, co może oznaczać, że wystąpił błąd podczas kopiowania danych z przestrzeni użytkownika. Dodatkowo, błąd miał się pojawić w funkcji `broken_write`. Poniżej znajduje się kod tej funkcji.
+
+```C
+ssize_t broken_write(struct file *filp, const char *user_buf, size_t count,
+	loff_t *f_pos)
+{
+	char *mybuf = NULL;
+	int mybuf_size = 100;
+	int real_count = count;
+	int err;
+
+	// Initialize the memory
+	kmalloc(mybuf_size, GFP_KERNEL);
+
+	// Take the max(mybuf_size, count)
+	if (real_count > mybuf_size)
+		real_count = mybuf_size;
+
+	// Copy the buffer from user space
+	err = copy_from_user(mybuf, user_buf, real_count);
+	mybuf[mybuf_size] = 0;
+
+	if (!err && real_count > 0) {
+		// Count number of digits in buffer
+		numbers_count = count_numbers(mybuf);
+	} else {
+		printk(KERN_WARNING "BROKEN: error occured in write function");
+	}
+
+	// Free the memory
+	if (mybuf != NULL)
+		kfree(mybuf);
+
+	write_count++;
+	return real_count;
+}
+```
+
+Po przeanalizowaniu tego kodu okazuje się, że faktycznie nastąpił tu błąd. Wprawdzie używana jest funkcja kmalloc, ale jej wynik jest ignorowany, zatem wskaźnik mybuf przekazany do funkcji kopiowania z przestrzeni użytkownika jest równy `NuLL`.
 
 ## Zadanie 2 - GDB.
 
