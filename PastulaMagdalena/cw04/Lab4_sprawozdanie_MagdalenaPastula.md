@@ -45,9 +45,11 @@ ssize_t broken_read(struct file *filp, char *user_buf, size_t count,
 }
 ```
 
-Po przeanalizowaniu kodu okazuje się, że błędem jest próba zwolnienia pamięci z przestrzeni użytkownika, do której procesy z przestrzeni jądra nie mają bezpośredniego dostępu, co wyjaśnia problem z dostępem do pamięci zgłoszony w Oops. Po zmianie fragmentu `kfree(user_buf)` na `kfree(mybuf)` moduł już działa poprawnie i nie zgłasza żadnych błędów. Poniżej znajduje się screen komunikatów jądra po załadowaniu i usunięciu poprawionego modułu.
+Po przeanalizowaniu kodu okazuje się, że błędem jest próba zwolnienia pamięci z przestrzeni użytkownika, do której procesy z przestrzeni jądra nie mają bezpośredniego dostępu, co wyjaśnia problem z dostępem do pamięci zgłoszony w Oops. Po zmianie fragmentu `kfree(user_buf)` na `kfree(mybuf)` moduł już działa poprawnie i nie zgłasza żadnych błędów. Poniżej znajduje się screen komunikatów jądra po załadowaniu wykonaniu podanych instrukcji i usunięciu poprawionego modułu, a także screen komunikatu po wywołaniu komendy 'cat /dev/broken`.
 
-![Komunikaty jądra po poprawieniu błędu w module broken_module]()
+![Komunikaty jądra po poprawieniu błędu w module broken_module](./module1_repaired.png)
+
+![Komunikat po wypisaniu urządzenia /dev/broken](./module1_repaired_cat.png)
 
 ### Moduł nr 2
 
