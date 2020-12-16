@@ -224,9 +224,5 @@ Po naprawieniu tego błędu moduł działał już poprawnie.
 
 ## Zadanie 2 - GDB.
 
-### Urządzenie `/proc/loadsvg`
-
-### Urządzenie `/proc/PID/fd`
-
-### Urządzenie `/proc/PID/environ`
+Zadanie nie zostało wykonane.
 
