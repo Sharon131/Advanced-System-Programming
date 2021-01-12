@@ -4,3 +4,6 @@ main
 *.tar.gz
 *.ko
 *.sh
+*.cmd
+*.order
+.tmp*/

@@ -36,9 +36,13 @@ struct data {
 LIST_HEAD(buffer);
 size_t total_length;
 
+struct semaphore my_sem;
+
 static int __init linked_init(void)
 {
 	int result = 0;
+
+	sema_init(&my_sem, 1);
 
 	proc_entry = proc_create("linked", 0444, NULL, &proc_fops);
 	if (!proc_entry) {
@@ -69,6 +73,10 @@ static void clean_list(void)
 	struct list_head *tmp;
 	struct data *data;
 
+	if (down_interruptible(&my_sem)) {
+		/* Interrupted... No semaphore acquired.. */
+		return -EINTR;
+	}
 	list_for_each_safe(cur, tmp, &buffer) {
 		data = list_entry(cur, struct data, list);
 		printk(KERN_DEBUG "linked: clearing <%*pE>\n",
@@ -78,6 +86,8 @@ static void clean_list(void)
 		kfree(data);
 	}
 	total_length = 0;
+
+	up(&my_sem);
 }
 
 static void __exit linked_exit(void)
@@ -105,6 +115,10 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 	if (*f_pos > total_length)
 		return 0;
 
+	if (down_interruptible(&my_sem)) {
+		/* Interrupted... No semaphore acquired.. */
+		return -EINTR;
+	}
 	if (list_empty(&buffer))
 		printk(KERN_DEBUG "linked: empty list\n");
 
@@ -124,6 +138,7 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 
 		if (copy_to_user(user_buf + copied, data->contents, to_copy)) {
 			printk(KERN_WARNING "linked: could not copy data to user\n");
+			up(&my_sem);
 			return -EFAULT;
 		}
 		copied += to_copy;
@@ -137,6 +152,8 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 		copied, real_length);
 	*f_pos += real_length;
 	read_count++;
+
+	up(&my_sem);
 	return copied;
 }
 
@@ -169,13 +186,21 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 			result = count;
 			goto err_contents;
 		}
+		if (down_interruptible(&my_sem)) {
+			return -EINTR;
+		}
 		list_add_tail(&(data->list), &buffer);
 		total_length += to_copy;
 		*f_pos += to_copy;
-		mdelay(10);
+		up(&my_sem);
+		mdelay(1000);
 	}
 
+	if (down_interruptible(&my_sem)) {
+		return -EINTR;
+	}
 	write_count++;
+	up(&my_sem);
 	return count;
 
 err_contents:
