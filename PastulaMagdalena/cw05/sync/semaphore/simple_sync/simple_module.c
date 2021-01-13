@@ -63,6 +63,7 @@ ssize_t simple_read(struct file *filp, char __user *user_buf,
 	local_buf = kmalloc(length_to_copy, GFP_KERNEL);
 	if (!local_buf) {
 		err = -ENOMEM;
+		up(&my_sem);
 		goto cleanup;
 	}
 
@@ -72,6 +73,7 @@ ssize_t simple_read(struct file *filp, char __user *user_buf,
 	}
 
 	up(&my_sem);
+
 	// 2. Send the text
 	err = copy_to_user(user_buf, local_buf, length_to_copy);
 	if (err < 0)

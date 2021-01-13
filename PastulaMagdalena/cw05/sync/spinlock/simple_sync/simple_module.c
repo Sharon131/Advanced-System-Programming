@@ -18,8 +18,6 @@ const char msg_str[] = "-0123456789-ABCDEFGHIJ-";
 const int msg_len = sizeof(msg_str);
 int msg_pos;
 
-DEFINE_MUTEX(my_mutex);
-
 static int __init simple_init(void)
 {
 	int result;
@@ -49,7 +47,6 @@ ssize_t simple_read(struct file *filp, char __user *user_buf,
 	int err;
 
 	// 1. Prepare the text to send
-	mutex_lock(&my_mutex);
 
 	// Calculate the length
 	length_to_copy = msg_len - (msg_pos % msg_len);
@@ -59,7 +56,6 @@ ssize_t simple_read(struct file *filp, char __user *user_buf,
 	local_buf = kmalloc(length_to_copy, GFP_KERNEL);
 	if (!local_buf) {
 		err = -ENOMEM;
-		mutex_unlock(&my_mutex);
 		goto cleanup;
 	}
 
@@ -68,8 +64,6 @@ ssize_t simple_read(struct file *filp, char __user *user_buf,
 		msleep(100);
 	}
 
-	mutex_unlock(&my_mutex);
-	msleep(10);
 	// 2. Send the text
 	err = copy_to_user(user_buf, local_buf, length_to_copy);
 	if (err < 0)
