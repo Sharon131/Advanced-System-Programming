@@ -6,3 +6,5 @@ PWD   := $(shell pwd)
 default:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
+clean:
+	make -C $(KDIR) M=$(PWD) clean
