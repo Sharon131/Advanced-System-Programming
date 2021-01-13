@@ -12,6 +12,8 @@ Zadanie zostało wykonane zarówno dla modułu simple_sync jak i linked_buffer. 
 
 ### Zadanie 3 - synchoronizacja za pomocą mechanizmu spilock.
 
+Zadanie zostało wykonane.
+Dla modułu simple_module oprócz dodanie spinlocku zmieniono również odrobinę kod, ponieważ spinlock nie powinien być założony, gdy funkcja zasypia. W związku z tym, wartość msg_pos jest pobierana i zapisywana do zmiennej lokalnej podczas założonego spinlocku, a po zdjęciu spinlocka wykorzystywana jest zapisana wartość.
 
 
 ### Zadanie 4 - synchronizacja za pomocą RCU.
