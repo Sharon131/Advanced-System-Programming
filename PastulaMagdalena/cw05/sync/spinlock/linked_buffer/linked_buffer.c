@@ -33,12 +33,17 @@ struct data {
 	struct list_head list;
 };
 
+spinlock_t my_lock;
+unsigned long flags;
+
 LIST_HEAD(buffer);
 size_t total_length;
 
 static int __init linked_init(void)
 {
 	int result = 0;
+
+	spin_lock_init(&my_lock);
 
 	proc_entry = proc_create("linked", 0444, NULL, &proc_fops);
 	if (!proc_entry) {
@@ -105,6 +110,7 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 	if (*f_pos > total_length)
 		return 0;
 
+	spin_lock_irqsave(&my_lock, flags);
 	if (list_empty(&buffer))
 		printk(KERN_DEBUG "linked: empty list\n");
 
@@ -137,6 +143,7 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 		copied, real_length);
 	*f_pos += real_length;
 	read_count++;
+	spin_unlock_irqrestore(&my_lock, flags);
 	return copied;
 }
 
@@ -150,23 +157,27 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 	printk(KERN_WARNING "linked: write, count=%zu f_pos=%lld\n",
 		count, *f_pos);
 
+	spin_lock(&my_lock);
 	for (i = 0; i < count; i += INTERNAL_SIZE) {
 		size_t to_copy = min((size_t) INTERNAL_SIZE, count - i);
 
 		data = kzalloc(sizeof(struct data), GFP_KERNEL);
 		if (!data) {
 			result = -ENOMEM;
+			spin_unlock(&my_lock);
 			goto err_data;
 		}
 		data->length = to_copy;
 
 		if (copy_from_user(data->contents, user_buf + i, to_copy)) {
 			result = -EFAULT;
+			spin_unlock(&my_lock);
 			goto err_contents;
 		}
 		if (strncmp(data->contents, "xxx&", 4) == 0) {
 			clean_list();
 			result = count;
+			spin_unlock(&my_lock);
 			goto err_contents;
 		}
 		list_add_tail(&(data->list), &buffer);
@@ -176,6 +187,7 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 	}
 
 	write_count++;
+	spin_unlock(&my_lock);
 	return count;
 
 err_contents:
