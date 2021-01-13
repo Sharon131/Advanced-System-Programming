@@ -67,7 +67,7 @@ err:
 	return result;
 }
 
-static void clean_list(void)
+static int clean_list(void)
 {
 	struct list_head *cur;
 	struct list_head *tmp;
@@ -88,6 +88,7 @@ static void clean_list(void)
 	total_length = 0;
 
 	up(&my_sem);
+	return 0;
 }
 
 static void __exit linked_exit(void)
@@ -112,13 +113,14 @@ ssize_t linked_read(struct file *filp, char __user *user_buf,
 	printk(KERN_WARNING "linked: read, count=%zu f_pos=%lld\n",
 		count, *f_pos);
 
-	if (*f_pos > total_length)
-		return 0;
-
 	if (down_interruptible(&my_sem)) {
 		/* Interrupted... No semaphore acquired.. */
 		return -EINTR;
 	}
+
+	if (*f_pos > total_length)
+		return 0;
+
 	if (list_empty(&buffer))
 		printk(KERN_DEBUG "linked: empty list\n");
 
@@ -182,7 +184,11 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 			goto err_contents;
 		}
 		if (strncmp(data->contents, "xxx&", 4) == 0) {
-			clean_list();
+			int code = clean_list();
+			if (code != 0) {
+				kfree(data);
+				return code;
+			}
 			result = count;
 			goto err_contents;
 		}
@@ -193,7 +199,7 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 		total_length += to_copy;
 		*f_pos += to_copy;
 		up(&my_sem);
-		mdelay(1000);
+		mdelay(100);
 	}
 
 	if (down_interruptible(&my_sem)) {
@@ -211,8 +217,12 @@ err_data:
 
 int linked_proc_show(struct seq_file *m, void *v)
 {
+	if (down_interruptible(&my_sem)) {
+		return -EINTR;
+	}
 	seq_printf(m, proc_info,
 		read_count, write_count, total_length);
+	up(&my_sem);
 	return 0;
 }
 
