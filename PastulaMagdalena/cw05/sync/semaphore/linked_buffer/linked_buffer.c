@@ -169,6 +169,9 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 	printk(KERN_WARNING "linked: write, count=%zu f_pos=%lld\n",
 		count, *f_pos);
 
+	if (down_interruptible(&my_sem)) {
+		return -EINTR;
+	}
 	for (i = 0; i < count; i += INTERNAL_SIZE) {
 		size_t to_copy = min((size_t) INTERNAL_SIZE, count - i);
 
@@ -192,19 +195,16 @@ ssize_t linked_write(struct file *filp, const char __user *user_buf,
 			result = count;
 			goto err_contents;
 		}
-		if (down_interruptible(&my_sem)) {
-			return -EINTR;
-		}
 		list_add_tail(&(data->list), &buffer);
 		total_length += to_copy;
 		*f_pos += to_copy;
-		up(&my_sem);
+		// up(&my_sem);
 		mdelay(100);
 	}
 
-	if (down_interruptible(&my_sem)) {
-		return -EINTR;
-	}
+	// if (down_interruptible(&my_sem)) {
+	// 	return -EINTR;
+	// }
 	write_count++;
 	up(&my_sem);
 	return count;
