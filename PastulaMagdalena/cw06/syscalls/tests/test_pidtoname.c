@@ -25,14 +25,14 @@ int main(int argc, char **argv)
 
 	if (pid != (pid_t) pid) {
         printf("Pid value is too big\n");
-        return -1;
+        return 1;
     }
 
 	printf("Checking name of process with pid %ld...\n", pid);
 
 	if (pidtoname(pid, name)) {
         printf("There is no process with that pid.\n");
-        return -1;
+        return 1;
     }
 
 	printf("Process with pid %ld is named '%s'\n", pid, name);

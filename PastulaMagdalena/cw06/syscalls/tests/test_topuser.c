@@ -1,16 +1,23 @@
 #include <sys/syscall.h>
-#include <linux/unistd.h>
+#include <unistd.h>
 #include <stdio.h>
-#include <errno.h>
 
 #define __NR_topuser 341
 
-long topuser(void) {
-	return 0;
+long topuser(uid_t* user_id) 
+{
+	return syscall(__NR_topuser, user_id);
 }
 
 int main()
 {
-	return 0;
+	uid_t top_uid;
+
+	if (topuser(&top_uid)) {
+		printf("Error while getting top user.");
+		return 1;
+	}
+
+	printf("User with id %ld has the most processes at the moment\n", (long) top_uid);
 }
 
