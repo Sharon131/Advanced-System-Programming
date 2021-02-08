@@ -2,6 +2,7 @@
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 
 static long count_processes(size_t __user* entries_no)
 {
@@ -75,12 +76,12 @@ out:
 	return code;
 }
 
-asmlinkage int sys_kernelps(size_t __user * entries_no,
-		char __user *__user * entries_table) {}
-     
+asmlinkage long sys_kernelps(size_t __user * entries_no,
+		char __user *__user * entries_table) 
+{     
     if (entries_table == NULL) {
-        return list_processes(entries_no, entries_table);
-    } else {
         return count_processes(entries_no);
+    } else {
+        return list_processes(entries_no, entries_table);
     }
 }

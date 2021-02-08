@@ -9,3 +9,8 @@ main
 .tmp*/
 *.mod.c
 *.symvers
+test_freeblocks
+test_kernelps
+test_pidtoname
+test_timeuser
+test_topuser

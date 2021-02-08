@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		printf("There are %zu processes running at the moment\n", 
+		printf("There are %zu processes running at the moment.\n", 
 															processes_no);
 	} else {
 		input_number = atol(argv[1]);
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 		for (int i = 0; i < processes_no; i++) {
 			printf("'%s'\n", entries_pointers[i]);
 		}
-		printf("Number of processes: %zu\n", processes_no);
+		printf("Number of processes: %zu.\n", processes_no);
 
 		free(entries_pointers);
 		free(entries_buf);

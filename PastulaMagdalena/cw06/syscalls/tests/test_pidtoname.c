@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 	}
 
 	if (pid != (pid_t) pid) {
-        printf("Pid value is too big\n");
+        printf("Pid value is too big.\n");
         return 1;
     }
 
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-	printf("Process with pid %ld is named '%s'\n", pid, name);
+	printf("Process with pid %ld is named '%s'.\n", pid, name);
 
 	return 0;
 }

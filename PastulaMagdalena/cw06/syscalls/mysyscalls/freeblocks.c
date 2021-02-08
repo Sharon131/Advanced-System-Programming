@@ -11,7 +11,7 @@ asmlinkage long sys_freeblocks(char __user* path, u64 * count) {
 	returned_value = user_statfs(path, &stat);
 	if (returned_value)
     {
-        return retval;
+        return to_return;
     }
 
 	to_return = stat.f_bfree;
